@@ -9,7 +9,7 @@
 - Fiyat, bir önceki seviyeye göre istenen yüzdede düşer **ve** son 30 günün kayıtlı asgari fiyatından daha düşükse Telegram bildirimi sıraya alır. İndirim algılama yalnızca **kendi fiyat geçmişimize** dayanır; mağazanın indirim iddialarını doğrulamaz.
 - Son 90 günlük fiyat değişim geçmişini takip eder, yinelenen bildirimleri azaltır, hatalarda bildirimleri sırada tutar.
 - Konfigüre edilmiş **RSS/Atom kupon kaynaklarında** yeni kupon başlıklarını izler. Başlık bulunan yeni kayıtları yalnızca **"KUPON ADAYI (DOĞRULANMADI)"** olarak gönderir. Kuponun ödeme ekranında çalıştığını asla iddia etmez.
-- Telegram API başarı/`message_id` döndürmeden bildirim gönderilmiş sayılmaz. Bu, mesajın telefonda açıldığını veya cihazın bildirimi aldığını kanıtlamaz. Başarısız gönderimler artan beklemeyle (30 dakika → 1 saat → 2 saat ... en fazla 24 saat) yeniden denenir; son 100 taramanın hata özeti tutulur. Kalıcı state dosyası GitHub Actions tarafından commit edilir.
+- Telegram API başarı/`message_id` döndürmeden bildirim gönderilmiş sayılmaz. Bu, mesajın telefonda açıldığını veya cihazın bildirimi aldığını kanıtlamaz. Başarısız gönderimler artan beklemeyle (30 dakika → 1 saat → 2 saat ... en fazla 24 saat) yeniden denenir; son 100 taramanın hata özeti tutulur. Üretimde kalıcı durum Neon üzerinde tutulur; Public GitHub geçmişine bildirim/fiyat verisi yazılmaz.
 
 ## Hızlı kurulum (0 TL hedefi)
 
