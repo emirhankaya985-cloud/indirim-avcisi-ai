@@ -1,5 +1,7 @@
 name: Telegram connection test
 on:
+  push:
+    paths: ['.github/workflows/telegram-test.yml']
   workflow_dispatch:
 permissions:
   contents: read
