@@ -1,15 +1,15 @@
 {
   "kind": "diagnostic_marketplace_smoke_only",
   "tracked_products": 0,
-  "github_run_id": "44945377002",
-  "observed_at_utc": "2026-11-21T20:16:16+00:00",
+  "github_run_id": "44945424894",
+  "observed_at_utc": "2026-11-21T20:16:51+00:00",
   "successful_price_reads": 1,
   "products": [
     {
       "store": "Trendyol",
       "product": "Gamepower Ogre Red Switch",
       "url": "https://www.trendyol.com/gamepower/ogre-rgb-60m-red-switch-usb-mekanik-gaming-klavye-p-33707213",
-      "observed_at_utc": "2026-11-21T20:16:16+00:00",
+      "observed_at_utc": "2026-11-21T20:16:51+00:00",
       "status": "ok",
       "price": "1999.00",
       "currency": "TRY",
@@ -19,7 +19,7 @@
       "store": "Hepsiburada",
       "product": "Logitech G203 LIGHTSYNC",
       "url": "https://www.hepsiburada.com/logitech-g203-lightsync-rgb-mouse-pm-HB00000X8001",
-      "observed_at_utc": "2026-11-21T20:16:16+00:00",
+      "observed_at_utc": "2026-11-21T20:16:51+00:00",
       "status": "error",
       "error_type": "RuntimeError",
       "reason": "Robots check HTTP 403 for www.hepsiburada.com"
@@ -28,7 +28,7 @@
       "store": "Amazon Türkiye",
       "product": "Logitech M90",
       "url": "https://www.amazon.com.tr/Logitech-Kablolu-Diz%C3%BCst%C3%BC-Bilgisayar-Kullan%C4%B1ma/dp/B003D8ZT0C",
-      "observed_at_utc": "2026-11-21T20:16:16+00:00",
+      "observed_at_utc": "2026-11-21T20:16:51+00:00",
       "status": "error",
       "error_type": "ValueError",
       "reason": "No reliable product price in JSON-LD or price meta tags"
