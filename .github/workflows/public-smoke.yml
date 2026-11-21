@@ -1,0 +1,36 @@
+name: Public marketplace smoke (diagnostic)
+on:
+  push:
+    paths:
+      - '.github/workflows/public-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  marketplace-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read 3 public products with robots compliance
+        id: probe
+        continue-on-error: true
+        run: python -m scripts.smoke_marketplaces
+      - name: Commit evidence without credentials
+        if: always()
+        run: |
+          test -f reports/live-marketplace-smoke.json || exit 1
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add reports/live-marketplace-smoke.json
+          git commit -m 'test: record real marketplace accessibility [skip ci]' || exit 0
+          git pull --rebase
+          git push
+      - name: Require 3 successful product reads
+        if: steps.probe.outcome == 'failure'
+        run: exit 1
