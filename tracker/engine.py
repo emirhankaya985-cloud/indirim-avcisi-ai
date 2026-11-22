@@ -159,7 +159,12 @@ def dispatch_pending(state: dict, sender=send_message, current_time: datetime | 
         if (sent + failed >= 20) or (retry_at and datetime.fromisoformat(retry_at) > now):
             remaining.append(item)
             continue
-        ok, info = sender(item['body'])
+        try:
+            ok, info = sender(item['body'])
+        except Exception as exc:
+            # A transport exception must never discard a pending notification.
+            # Do not interpolate exception messages: they may contain tokens/URLs.
+            ok, info = False, f'Telegram transport exception: {type(exc).__name__}'
         if ok:
             sent += 1
             state.setdefault('delivery_log', []).append({
@@ -188,7 +193,9 @@ def execute(config: dict, old_state: dict, downloader=None, sender=send_message,
         try:
             raw = downloader.read(p['url'], MARKETPLACES, respect_robots=True)
             price = extract_price(raw.decode('utf-8', errors='replace'), p.get('currency', 'TRY'))
-            if update_price(state, p, price.amount, now, price.evidence):
+            # Preserve the public product URL with each evidence record in Neon.
+            if update_price(state, p, price.amount, now,
+                            f'{price.evidence}; url={p["url"]}'):
                 count['price_alerts'] += 1
             count['products_ok'] += 1
         except Exception as exc:
