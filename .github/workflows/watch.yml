@@ -3,6 +3,10 @@ on:
   schedule:
     - cron: '7,37 * * * *'
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/watch.yml'
 permissions:
   contents: read
 concurrency:
@@ -10,7 +14,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   watch:
-    if: ${{ vars.TRACKING_ENABLED == 'true' }}
+    # The old job-level if silently skipped the entire run when TRACKING_ENABLED
+    # was missing. A runner now reports missing prerequisites as a failed
+    # configuration check. It never claims a live scan without credentials.
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -18,15 +24,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Verify required credentials (do not reveal secrets)
+      - name: Check production prerequisites (no secrets printed)
         env:
+          TRACKING_ENABLED: ${{ vars.TRACKING_ENABLED }}
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          test -n "$NEON_DATABASE_URL" || { echo 'NEON_DATABASE_URL secret missing'; exit 1; }
-          test -n "$TELEGRAM_BOT_TOKEN" || { echo 'TELEGRAM_BOT_TOKEN secret missing'; exit 1; }
-          test -n "$TELEGRAM_CHAT_ID" || { echo 'TELEGRAM_CHAT_ID secret missing'; exit 1; }
+        run: python -m scripts.preflight
       - name: Install Neon driver
         run: pip install -r requirements.txt
       - name: Run live price and coupon checks
