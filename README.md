@@ -1,3 +1,9 @@
+# BİTTİ — Proje sonlandırıldı
+
+26 Kasım 2026 itibarıyla bu projenin geliştirilmesinden vazgeçilmiştir. Depo herkese açık olarak mevcut kod ve çalışma geçmişini korumak için bırakılmıştır. Aktif üretim hizmeti veya bakım taahhüdü yoktur. Aşağıdaki bilgiler geçmiş geliştirme durumunu anlatır.
+
+---
+
 # İndirim Avcısı AI — Fiyat ve Kupon Takip Botu
 
 **Durum:** Açık lisanslı Open Prices kaynağından 3 tarihli gerçek gözlem Neon'a kaydedildi (2 barkod sağlama kontrolü geçerli). Bunlar anlık mağaza teklifleri değildir. Actions üzerinden uygulama rolü, kişisel bildirim ve doğal zamanlama doğrulanmadan canlı otomasyon tamamlanmış sayılmaz.
