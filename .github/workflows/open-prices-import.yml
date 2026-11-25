@@ -1,0 +1,25 @@
+name: Open Prices observation pilot
+on:
+  schedule:
+    - cron: '23 */2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: indirim-open-prices-pilot
+  cancel-in-progress: false
+jobs:
+  import:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || vars.OPEN_PRICES_ENABLED == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: Import dated observations (no notifications)
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: python -m scripts.import_open_prices
