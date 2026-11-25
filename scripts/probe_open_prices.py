@@ -1,4 +1,4 @@
-"""Read-only, two-request source suitability probe; no personal data or prices logged."""
+"""Read-only, two-request source suitability probe; only public product observation fields, no contributor data."""
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 import json
