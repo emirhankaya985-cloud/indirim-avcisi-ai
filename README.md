@@ -1,6 +1,6 @@
 # İndirim Avcısı AI — Fiyat ve Kupon Takip Botu
 
-**Durum:** Kod ve yerel testler hazırlanmıştır. Gerçek ürünler, bir kupon kaynağı, Telegram sırları ve GitHub zamanlayıcısı kullanıcı tarafından bağlanmadan **canlı değil**. Örnek/sahte fiyat veya kupon üretilmez.
+**Durum:** Açık lisanslı Open Prices kaynağından 3 tarihli gerçek gözlem Neon'a kaydedildi (2 barkod sağlama kontrolü geçerli). Bunlar anlık mağaza teklifleri değildir. Actions üzerinden uygulama rolü, kişisel bildirim ve doğal zamanlama doğrulanmadan canlı otomasyon tamamlanmış sayılmaz.
 
 ## Neler yapar?
 
@@ -111,3 +111,13 @@ yalnızca API kabulüdür, telefonda okundu kanıtı değildir.
 **Açık sınırlama:** Mesajın Telegram tarafından kabulü ile kalıcı veritabanı
 commit'i arasında iş kesilirse, nadiren aynı alarm bir kez daha gönderilebilir.
 Bu sistem `at-least-once` teslim semantiği uygular.
+
+## Görev 3 — bağlantı ve gerçek kaynak pilotu
+
+1. [Neon projesinde](https://console.neon.tech/app/projects/noisy-violet-07993256) mevcut `indirim_app` rolünün parolasını güvenli şekilde ayarla ve `indirim_avcisi` veritabanı için Connect bağlantısını kopyala. Yeni proje oluşturma; owner yerine uygulama rolünü kullan.
+2. [Actions secrets](https://github.com/emirhankaya985-cloud/indirim-avcisi-ai/settings/secrets/actions) sayfasına `NEON_DATABASE_URL` ekle. ntfy için `NTFY_TOPIC` (ntfy.sh üzerindeki kişisel topic adı, URL değil) ve gerekiyorsa `NTFY_TOKEN`; Telegram alternatifi için `TELEGRAM_BOT_TOKEN` ile `TELEGRAM_CHAT_ID`. Sırları sohbet, commit veya loga yazma.
+3. [Live connection test](https://github.com/emirhankaya985-cloud/indirim-avcisi-ai/actions/workflows/live-connection-test.yml) → Run workflow (main). Bir UTC gününde bir TEST denemesi; Neon yazma/okuma ve API makbuzu doğrulanır. Telefonda gösterim kanıtı değildir. Belirsiz gönderim aynı gün otomatik tekrarlanmaz.
+4. [Open Prices observation pilot](https://github.com/emirhankaya985-cloud/indirim-avcisi-ai/actions/workflows/open-prices-import.yml) → Run workflow. Başarıdan sonra [Variables](https://github.com/emirhankaya985-cloud/indirim-avcisi-ai/settings/variables/actions) bölümüne `OPEN_PRICES_ENABLED=true` ekle. İki doğal zamanlanmış çalışmayı kontrol et. Bu pilot anlık fırsat bildirimi göndermez.
+5. [Daily report](https://github.com/emirhankaya985-cloud/indirim-avcisi-ai/actions) üzerinden günlük raporun API makbuzunu doğrula. `TRACKING_ENABLED=true` yalnızca yetkili anlık mağaza kaynağı ve kişisel kanal doğrulanınca etkinleştirilir. Şu an ürün ve kupon listeleri boş; geçmiş gözlemler canlı fiyat gibi kullanılmaz.
+
+**Veri atfı:** Open Prices / Open Food Facts, ODbL. [Veri ve lisans](https://openfoodfacts.github.io/open-prices/guides/data/) · [API](https://prices.openfoodfacts.org/api/docs). Pilot kayıtları ayrı `open_prices_observations` tablosundadır; kaynak gözlem tarihi, barkod, mağaza konum kimliği, kanıt kimliği ve kaynak bağlantısı korunur. Barkod sağlaması geçmeyen kaynak kayıtları doğrulanmış ürün sayılmaz. Tarihsel gözlem ve kaynak indirim işareti güncel indirim veya kullanılabilir kupon değildir. 90 günlük kaynak sorgusu, 100 satır/çalışma ve 5.000 satır depolama tavanı kullanılır; önceki kayıtlar otomatik silinmez. Bu kaynak başka lisanslı veriyle birleştirilmez.
