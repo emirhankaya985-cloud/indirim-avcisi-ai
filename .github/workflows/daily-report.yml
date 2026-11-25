@@ -5,6 +5,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: indirim-avcisi-state
+  cancel-in-progress: false
 jobs:
   report:
     runs-on: ubuntu-latest
@@ -15,7 +18,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
-      - name: Send daily status without exposing private state
+      - name: Send daily and Monday weekly status without exposing private state
         env:
           TRACKING_ENABLED: ${{ vars.TRACKING_ENABLED }}
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}

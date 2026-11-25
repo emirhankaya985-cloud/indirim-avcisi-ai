@@ -5,6 +5,7 @@ import os
 import json
 
 from .discovery import discover, due, batch_products, validate_source
+from .analytics import comparable_offers
 from .engine import execute, dispatch_pending
 from .network import Downloader
 from .storage import load, persist, is_neon_enabled
@@ -42,13 +43,14 @@ def tick(config, state, downloader, now):
         counts = {'products_ok': 0, 'feeds_ok': 0, 'price_alerts': 0,
                   'coupon_candidates': 0, 'sent': 0, 'errors': []}
         future.setdefault('run_log', []).append({'time': now.isoformat()})
-        future['run_log'] = future['run_log'][-100:]
+        future['run_log'] = future['run_log'][-400:]
     counts['errors'].extend(errors)
     if not products:
         counts['errors'].append('No eligible product in catalog')
     counts['discovered'] = added
     counts['products_attempted'] = len(products)
     counts['pending'] = len(future.get('pending', []))
+    future['comparison_candidates'] = comparable_offers(eligible, future.get('products', {}), now)[:500]
     future['last_run'] = now.isoformat()
     future['last_summary'] = counts
     future['run_log'][-1].update(counts)
@@ -67,6 +69,9 @@ def main():
         config = json.loads(Path('config.json').read_text(encoding='utf-8'))
         for source in config.get('catalog_sources', []):
             validate_source(source)
+        for feed in config.get('coupon_feeds', []):
+            if feed.get('authorized') is not True or not feed.get('permission_reference'):
+                raise ValueError('Coupon source permission required')
         path = Path('data/state.json')
         state, version = load(path)
         if not (config.get('products') or config.get('catalog_sources') or state.get('catalog')):

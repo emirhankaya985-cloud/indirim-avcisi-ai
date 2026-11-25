@@ -12,6 +12,7 @@ import re
 import tempfile
 
 from .extract import coupon_entries, extract_price
+from .analytics import price_metrics
 from .network import Downloader, validate_url
 from .telegram import send_message
 
@@ -115,6 +116,8 @@ def update_price(state: dict, product: dict, price: Decimal, now: datetime, evid
         state.setdefault('pending', []).append({'id': key, 'type': 'price', 'body': body,
                                                  'created_at': timestamp(now), 'attempts': 0})
         existing['last_alert_at'] = timestamp(now)
+    existing['metrics'] = price_metrics(samples, price, prev, now, existing.get('all_time_low'))
+    existing['metrics']['currency'] = product.get('currency', 'TRY')
     if not samples or Decimal(samples[-1]['price']) != price or samples[-1]['time'][:10] != now.date().isoformat():
         samples.append({'time': timestamp(now), 'price': str(price),
                         'currency': product.get('currency', 'TRY'), 'evidence': evidence})
@@ -149,6 +152,13 @@ def update_feed(state: dict, feed: dict, parsed: list[dict[str, str]], now: date
                                                          'created_at': timestamp(now), 'attempts': 0})
                 new_count += 1
                 within_this_feed.add(key)
+    candidates = record.setdefault('candidates', {})
+    for entry, key in zip(parsed, current_keys):
+        candidate = candidates.setdefault(key, {'first_seen': timestamp(now)})
+        candidate.update({'title': entry['title'], 'source_url': entry['link'] or feed['url'],
+                          'checked_at': timestamp(now), 'status': 'unverified',
+                          'expires_at': None, 'terms': None})
+    record['candidates'] = dict(list(candidates.items())[-1000:])
     record['seen'] = list(dict.fromkeys(current_keys + seen))[:1000]
     record.update({'initialized': True, 'last_checked': timestamp(now), 'last_error': None})
     return new_count
@@ -233,5 +243,5 @@ def execute(config: dict, old_state: dict, downloader=None, sender=send_message,
         'time': timestamp(now), 'products_ok': count['products_ok'],
         'feeds_ok': count['feeds_ok'], 'sent': count['sent'],
         'errors': count['errors'][:10]})
-    state['run_log'] = state['run_log'][-100:]
+    state['run_log'] = state['run_log'][-400:]
     return state, count

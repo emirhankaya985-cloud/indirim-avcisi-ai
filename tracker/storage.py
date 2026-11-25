@@ -7,6 +7,7 @@ silently overwriting concurrent updates.
 from __future__ import annotations
 
 from pathlib import Path
+from copy import deepcopy
 import json
 import os
 
@@ -59,6 +60,16 @@ def persist(path: Path, state: dict, expected_version: int | None) -> None:
         return
     if expected_version is None:
         raise RuntimeError('Neon state version missing')
+    snapshot = deepcopy(state)
+    observations = []
+    for product_id, product_state in snapshot.get('products', {}).items():
+        for sample in product_state.get('samples', []):
+            if sample.get('_history_saved') is True:
+                continue
+            observations.append((product_id, sample['time'], sample['price'],
+                                 sample.get('currency', product_state.get('currency', 'TRY')),
+                                 sample.get('evidence', 'legacy: individual source evidence unavailable')))
+            sample['_history_saved'] = True
     try:
         with _connection() as conn, conn.cursor() as cur:
             # PostgreSQL transaction: the state and its normalized price history
@@ -66,18 +77,19 @@ def persist(path: Path, state: dict, expected_version: int | None) -> None:
             cur.execute(
                 'UPDATE tracker_state SET payload = %s::jsonb, version = version + 1, '
                 'updated_at = now() WHERE id = 1 AND version = %s',
-                (json.dumps(state, ensure_ascii=False), expected_version),
+                (json.dumps(snapshot, ensure_ascii=False), expected_version),
             )
             if cur.rowcount != 1:
                 raise RuntimeError('Neon state version conflict; refusing overwrite')
-            for product_id, product_state in state.get('products', {}).items():
-                for sample in product_state.get('samples', []):
-                    cur.execute(
-                        'INSERT INTO price_history (product_id, observed_at, price, currency, evidence) '
-                        'VALUES (%s, %s, %s, %s, %s) ON CONFLICT (product_id, observed_at) DO NOTHING',
-                        (product_id, sample['time'], sample['price'],
-                         sample.get('currency', product_state.get('currency', 'TRY')), sample.get('evidence', product_state.get('evidence', 'unknown'))),
-                    )
+            for observation in observations:
+                cur.execute(
+                    'INSERT INTO price_history (product_id, observed_at, price, currency, evidence) '
+                    'VALUES (%s, %s, %s, %s, %s) ON CONFLICT (product_id, observed_at) DO NOTHING',
+                    observation,
+                )
+        # Update caller only after the transaction committed successfully.
+        state.clear()
+        state.update(snapshot)
     except RuntimeError:
         raise
     except Exception as exc:
