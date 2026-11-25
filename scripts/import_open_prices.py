@@ -73,15 +73,15 @@ def main():
             cur.execute('SELECT count(*) FROM open_prices_observations')
             existing=cur.fetchone()[0]
             for row in rows[:max(0,MAX_RECORDS-existing)]:
-                cur.execute('INSERT INTO open_prices_observations(source_id,product_code,location_id,proof_id,observed_date,price,currency,product_name,store_name,source_discount_flag,source_url) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(source_id) DO NOTHING',row)
+                cur.execute('INSERT INTO open_prices_observations(source_id,product_code,location_id,proof_id,observed_date,price,currency,product_name,store_name,source_discount_flag,source_url,barcode_checksum_valid) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,true) ON CONFLICT(source_id) DO NOTHING',row)
                 inserted+=cur.rowcount
         with _connection() as conn, conn.cursor() as cur:
-            cur.execute('SELECT count(*),count(DISTINCT product_code),max(observed_date) FROM open_prices_observations')
+            cur.execute('SELECT count(*),count(DISTINCT product_code) FILTER (WHERE barcode_checksum_valid),max(observed_date) FROM open_prices_observations')
             count,products,latest=cur.fetchone()
         print(json.dumps({'kind':'dated_open_prices_observations_not_live_offers',
                           'license':'ODbL — Open Prices / Open Food Facts',
                           'source_total_90_days':total,'returned':returned,'accepted':len(rows),
-                          'inserted':inserted,'stored_observations':count,'stored_products':products,
+                          'inserted':inserted,'stored_observations':count,'checksum_valid_products':products,
                           'latest_observation_date':str(latest) if latest else None,
                           'capacity_reached':count>=MAX_RECORDS,'partial_source_page':total>returned}))
         return 0 if rows and count else 1
