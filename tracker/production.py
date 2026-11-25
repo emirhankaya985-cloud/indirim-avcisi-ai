@@ -24,7 +24,12 @@ def tick(config, state, downloader, now):
     if sources and due(state.get('last_discovery_attempt'), now, 2):
         added, errors = discover(state, sources, downloader, now)
         state['last_discovery_attempt'] = now.isoformat()
-    products = batch_products(state, config.get('products', []))
+    # Removed or revoked sources must never be used for ongoing page access.
+    active_urls = {s['url'] for s in sources}
+    eligible = {k: v for k, v in state.get('catalog', {}).items() if v.get('source') in active_urls}
+    rotation = {'catalog': eligible, 'catalog_cursor': state.get('catalog_cursor', 0)}
+    products = batch_products(rotation, config.get('products', []))
+    state['catalog_cursor'] = rotation.get('catalog_cursor', 0)
     feeds = []
     if due(state.get('last_coupon_attempt'), now, 3):
         feeds = config.get('coupon_feeds', [])[:10]
