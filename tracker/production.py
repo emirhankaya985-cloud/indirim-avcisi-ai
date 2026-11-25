@@ -37,7 +37,7 @@ def tick(config, state, downloader, now):
         state['last_coupon_attempt'] = now.isoformat()
     if products or feeds:
         future, counts = execute({'products': products, 'coupon_feeds': feeds},
-                                 state, downloader=downloader, current_time=now, dry_run=True)
+                                 state, downloader=downloader, current_time=now, dry_run=True, strict=True)
     else:
         future = state
         counts = {'products_ok': 0, 'feeds_ok': 0, 'price_alerts': 0,
