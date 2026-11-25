@@ -64,7 +64,7 @@ def send_ntfy(body, env=None):
         with build_opener(_NoRedirect()).open(req, timeout=20) as response:
             result = json.loads(response.read(65536))
             if response.status == 200 and result.get('event') == 'message' and result.get('id'):
-                return True, 'ntfy API kabul etti'
+                return True, 'ntfy:' + str(result['id'])
     except Exception:
         pass
     return False, 'ntfy gönderimi doğrulanamadı'
@@ -86,13 +86,13 @@ def main():
             pass
     enabled = os.getenv('TRACKING_ENABLED') == 'true'
     body = render(state, config, enabled, datetime.now(timezone.utc), storage_ok)
-    telegram_ok, _ = send_message(body)
     ntfy_configured = bool(os.getenv('NTFY_TOPIC', '').strip())
     ntfy_ok = send_ntfy(body)[0] if ntfy_configured else None
+    telegram_ok = send_message(body)[0] if not ntfy_configured else None
     print('Telegram API kabulü: ' + ('evet' if telegram_ok else 'hayır'))
     print('ntfy API kabulü: ' + ('evet' if ntfy_ok else 'hayır' if ntfy_configured else 'yapılandırılmamış'))
     print('Neon okuma: ' + ('başarılı' if storage_ok else 'doğrulanamadı'))
-    return 0 if telegram_ok and storage_ok and (not ntfy_configured or ntfy_ok) else 1
+    return 0 if storage_ok and (ntfy_ok if ntfy_configured else telegram_ok) else 1
 
 
 if __name__ == '__main__':
