@@ -23,7 +23,10 @@ def render(state, config, enabled, now, storage_ok):
         except (KeyError, TypeError, ValueError):
             continue
     failures = sum(bool(r.get('errors')) for r in runs)
-    products = len(config.get('products', []))
+    active_sources = {s.get('url') for s in config.get('catalog_sources', []) if s.get('authorized') is True}
+    tracked_urls = {p.get('url') for p in config.get('products', [])}
+    tracked_urls.update(p.get('url') for p in state.get('catalog', {}).values() if p.get('source') in active_sources)
+    products = len(tracked_urls)
     feeds = len(config.get('coupon_feeds', []))
     scans = sum(r.get('products_ok', 0) for r in runs)
     feed_reads = sum(r.get('feeds_ok', 0) for r in runs)
@@ -31,6 +34,8 @@ def render(state, config, enabled, now, storage_ok):
     status = ('ENGELLİ' if blocked else 'VERİ YOK' if not runs
               else 'KONTROL GEREKLİ' if failures or not scans or len(runs) < 48
               else 'KAYITLI TARAMALAR VAR')
+    def total(key):
+        return str(sum(r[key] for r in runs)) if storage_ok and runs and all(key in r for r in runs) else 'bilinmiyor'
     return '\n'.join([
         'İndirim Avcısı AI — Günlük durum raporu',
         now.astimezone(ZoneInfo('Europe/Istanbul')).strftime('%d.%m.%Y %H:%M Türkiye'),
@@ -38,9 +43,12 @@ def render(state, config, enabled, now, storage_ok):
         f'Otomasyon: {"açık" if enabled else "kapalı"}',
         f'Neon: {"okuma başarılı" if storage_ok else "doğrulanamadı"}',
         f'Tanımlı ürün: {products} | Kupon akışı: {feeds}',
-        f'Son 24 saatte kayıtlı tarama: {len(runs)} (hedef 48, garanti değil)',
-        f'Başarılı ürün okumaları: {scans} | Akış okumaları: {feed_reads}',
-        f'Hatalı tarama: {failures} | API kabul edilen alarm: {sum(r.get("sent", 0) for r in runs)}',
+        f'Son 24 saatte kayıtlı tarama: {len(runs)} (hedef 48, garanti değil)' if storage_ok else 'Son 24 saatte tarama: bilinmiyor',
+        f'Başarılı ürün okumaları: {scans} | Akış okumaları: {feed_reads}' if storage_ok else 'Başarılı ürün/akış okumaları: bilinmiyor',
+        f'Yeni keşif: {total("discovered")} | İndirim: {total("price_alerts")} | Kupon adayı: {total("coupon_candidates")}',
+        f'Başarısız bildirim: {total("notification_failed")}',
+        'GitHub zamanlayıcı ve güncel faturalama/kota: bağımsız doğrulama gerekli',
+        f'Hatalı tarama: {failures} | API kabul edilen alarm: {sum(r.get("sent", 0) for r in runs)}' if storage_ok else 'Hatalı tarama / API kabulü: bilinmiyor',
         f'Bekleyen alarm: {len(state.get("pending", []))}' if storage_ok else 'Bekleyen alarm: bilinmiyor',
         'Kupon adayları ödeme ekranında doğrulanmış değildir.',
         'Neon okunamadığında sayımlar mevcut kayıtları temsil etmez.' if not storage_ok
