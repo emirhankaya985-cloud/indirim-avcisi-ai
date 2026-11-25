@@ -37,9 +37,11 @@ class Downloader:
         self.opener = build_opener(_NoRedirect())
         self.robot_cache: dict[str, RobotFileParser] = {}
 
-    def _download(self, url: str, hosts: list[str]) -> bytes:
+    def _download(self, url: str, hosts: list[str], robots: RobotFileParser | None = None) -> bytes:
         for _ in range(4):
             validate_url(url, hosts)
+            if robots is not None and not robots.can_fetch(USER_AGENT, url):
+                raise PermissionError('Robots disallows requested or redirected path')
             try:
                 with self.opener.open(Request(url, headers={'User-Agent': USER_AGENT, 'Accept': 'text/html, application/xml, text/xml, */*'}), timeout=20) as resp:
                     raw = resp.read(MAX_BYTES + 1)
@@ -80,4 +82,4 @@ class Downloader:
                 self.robot_cache[domain] = rp
             if not self.robot_cache[domain].can_fetch(USER_AGENT, url):
                 raise PermissionError(f'Robots disallows: {domain}')
-        return self._download(url, hosts)
+        return self._download(url, hosts, self.robot_cache[domain] if respect_robots else None)
