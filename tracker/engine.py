@@ -13,6 +13,7 @@ import tempfile
 
 from .extract import coupon_entries, extract_price
 from .analytics import price_metrics
+from .offers import extract_observation
 from .network import Downloader, validate_url
 from .telegram import send_message
 
@@ -89,7 +90,7 @@ def _prune(samples: list[dict], now: datetime) -> list[dict]:
     return kept[-9000:]
 
 
-def update_price(state: dict, product: dict, price: Decimal, now: datetime, evidence: str) -> bool:
+def update_price(state: dict, product: dict, price: Decimal, now: datetime, evidence: str, allow_alert: bool = True) -> bool:
     pid = product['id']
     existing = state.setdefault('products', {}).setdefault(pid, {'samples': []})
     samples = _prune(existing.get('samples', []), now)
@@ -100,7 +101,7 @@ def update_price(state: dict, product: dict, price: Decimal, now: datetime, evid
     threshold = Decimal(str(product.get('drop_percent', 5)))
     cooldown = timedelta(hours=int(product.get('cooldown_hours', 24)))
     last_alert = datetime.fromisoformat(existing['last_alert_at']) if existing.get('last_alert_at') else None
-    qualifies = (prev is not None and price <= prev * (Decimal('1') - threshold / Decimal('100'))
+    qualifies = (allow_alert and prev is not None and price <= prev * (Decimal('1') - threshold / Decimal('100'))
                  and (past_low is None or price < past_low)
                  and (last_alert is None or now - last_alert >= cooldown))
     if qualifies:
@@ -198,7 +199,7 @@ def dispatch_pending(state: dict, sender=send_message, current_time: datetime | 
 
 
 def execute(config: dict, old_state: dict, downloader=None, sender=send_message,
-            current_time: datetime | None = None, dry_run: bool = False) -> tuple[dict, dict]:
+            current_time: datetime | None = None, dry_run: bool = False, strict: bool = False) -> tuple[dict, dict]:
     _validate_entries(config)
     now = current_time or now_utc()
     state = deepcopy(old_state)
@@ -208,11 +209,28 @@ def execute(config: dict, old_state: dict, downloader=None, sender=send_message,
     for p in config.get('products', []):
         try:
             raw = downloader.read(p['url'], MARKETPLACES, respect_robots=True)
-            price = extract_price(raw.decode('utf-8', errors='replace'), p.get('currency', 'TRY'))
+            html = raw.decode('utf-8', errors='replace')
+            observed = extract_observation(html, p.get('currency', 'TRY')) if strict else None
+            price = observed.price if observed else extract_price(html, p.get('currency', 'TRY'))
+            previous = state.get('products', {}).get(p['id'], {})
+            old_stock = previous.get('stock')
+            old_stock_alert = previous.get('last_stock_alert_at')
             # Preserve the public product URL with each evidence record in Neon.
             if update_price(state, p, price.amount, now,
-                            f'{price.evidence}; url={p["url"]}'):
+                            f'{price.evidence}; url={p["url"]}',
+                            allow_alert=not observed or observed.stock != 'out_of_stock'):
                 count['price_alerts'] += 1
+            if observed:
+                record = state['products'][p['id']]
+                record.update(stock=observed.stock, seller=observed.seller)
+                shipping = str(observed.shipping) if observed.shipping is not None else None
+                record['metrics'].update(stock=observed.stock, shipping=shipping,
+                                         total_with_shipping=str(price.amount+observed.shipping) if shipping is not None else None)
+                if old_stock == 'out_of_stock' and observed.stock == 'in_stock' and (not old_stock_alert or now-datetime.fromisoformat(old_stock_alert)>=timedelta(hours=24)):
+                    key = sha256(f'stock:{p["id"]}:{timestamp(now)}'.encode()).hexdigest()[:20]
+                    state.setdefault('pending', []).append({'id':key,'type':'restock','body':f'STOK YENİLENDİ (sayfa verisi) | {p["name"][:100]}\n{p["url"]}', 'created_at':timestamp(now),'attempts':0})
+                    record['last_stock_alert_at'] = timestamp(now)
+                    count['restocks'] = count.get('restocks',0)+1
             count['products_ok'] += 1
         except Exception as exc:
             msg = f'Product {p["id"]}: {type(exc).__name__}: {str(exc)[:170]}'
