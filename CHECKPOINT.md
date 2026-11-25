@@ -14,3 +14,7 @@
 - PR #4 merged, 58 tests and main CI successful. Watch push skipped while tracking disabled.
 - Price windows, recorded all-time minimum, explainable score, GTIN checksum and strict matching of known model/variant/capacity, fresh comparison candidates, candidate source/checked date and unknown terms/expiry, 7-day report on Mondays, receipt retention and incremental history persistence added. GTIN comes from catalog and is not independently verified; shipping and stock remain unknown without reliable explicit source.
 - Existing projects have ntfy and Telegram integrations (Auto Video Publisher uses NTFY_TOPIC_URL/NTFY_TOPIC; CareerHunter uses NTFY_TOPIC). Secret values not retrieved or copied. GitHub connector has no secret/variable write action. No channel was tested live.
+
+## Strict production offer verification
+- PR #5 merged; 66 offline tests passed. Strict production extraction refuses missing currency and ambiguous/aggregate offers. Explicit stock, seller and unambiguous country-wide shipping can be retained; restock alerts require observed out-of-stock to in-stock transition and 24-hour cooldown. No live platform data or delivery validated.
+- Amazon Turkish affiliate license (updated April 14, 2026) restricts non-image advertising-content caching to 24 hours and collection/analysis without express written consent; do not use it for long-term price history without permission: https://gelirortakligi.amazon.com.tr/help/operating/policies
