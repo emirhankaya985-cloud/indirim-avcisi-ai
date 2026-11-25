@@ -8,3 +8,9 @@
 - Catalog max 500; rotates 12 products per 30-minute tick (not every product every 30 minutes). Discovery every 2h and configured RSS/Atom every 3h within tick. ntfy preferred, Telegram if ntfy not configured; no fallback on ambiguous sends. No secret values read or committed. Outbox persisted before delivery, duplicate possible after receipt but before commit.
 - Live source count: zero verified authorized feeds. No production notifications or price observations claimed. Existing config left empty; TRACKING_ENABLED must remain disabled until authorization and credentials confirmed.
 - Remaining: authorized actual feeds/API adapters, old DB recovery, app credential and Actions secrets/variable, live acceptance and restart test, exact cross-platform matching, stock/shipping, campaign expiry/terms, weekly report, quota measurements. Do not label production ready.
+
+## Follow-up analytics
+- New isolated endpoint restarted; persisted diagnostic row read after restart. No real price rows or live notification receipts.
+- PR #4 merged, 58 tests and main CI successful. Watch push skipped while tracking disabled.
+- Price windows, recorded all-time minimum, explainable score, GTIN checksum and strict matching of known model/variant/capacity, fresh comparison candidates, candidate source/checked date and unknown terms/expiry, 7-day report on Mondays, receipt retention and incremental history persistence added. GTIN comes from catalog and is not independently verified; shipping and stock remain unknown without reliable explicit source.
+- Existing projects have ntfy and Telegram integrations (Auto Video Publisher uses NTFY_TOPIC_URL/NTFY_TOPIC; CareerHunter uses NTFY_TOPIC). Secret values not retrieved or copied. GitHub connector has no secret/variable write action. No channel was tested live.
