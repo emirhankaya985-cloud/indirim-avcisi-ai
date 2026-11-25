@@ -76,7 +76,7 @@ def persist(path: Path, state: dict, expected_version: int | None) -> None:
                         'INSERT INTO price_history (product_id, observed_at, price, currency, evidence) '
                         'VALUES (%s, %s, %s, %s, %s) ON CONFLICT (product_id, observed_at) DO NOTHING',
                         (product_id, sample['time'], sample['price'],
-                         product_state.get('currency', 'TRY'), product_state.get('evidence', 'unknown')),
+                         sample.get('currency', product_state.get('currency', 'TRY')), sample.get('evidence', product_state.get('evidence', 'unknown'))),
                     )
     except RuntimeError:
         raise
