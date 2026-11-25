@@ -14,9 +14,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   watch:
-    # The old job-level if silently skipped the entire run when TRACKING_ENABLED
-    # was missing. A runner now reports missing prerequisites as a failed
-    # configuration check. It never claims a live scan without credentials.
+    # A disabled scheduled tracker should not consume a runner or report a failure.
+    # Manual dispatch still runs preflight and reports missing prerequisites.
+    if: github.event_name == 'workflow_dispatch' || vars.TRACKING_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

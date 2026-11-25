@@ -16,8 +16,8 @@
 1. Kodu **mevcut Public GitHub deposuna**, örn. `emirhankaya985-cloud/indirim-avcisi-ai`, yükleyin. Bu ZIP kendi kendine bir repo veya cron oluşturmaz.
 2. `config.json` içine izlenecek **gerçek ürün bağlantılarını** veya **gerçek RSS/Atom kupon akışlarını** girin. Örnek şema aşağıda. Fiyatı mağaza sayfasından otomatik çıkaramayan bağlantılar hata verir; e-ticaret siteleri otomasyon erişimini engelleyebilir.
 3. GitHub deposunda **Settings → Secrets and variables → Actions → New repository secret** bölümünden `TELEGRAM_BOT_TOKEN` ve `TELEGRAM_CHAT_ID` tanımlayın. Tokenı kaynak dosyalarına koymayın. Aynı isimli mevcut secretların başka projelerde olması bu yeni depoda otomatik çalışacağı anlamına gelmez.
-4. **Settings → Secrets and variables → Actions → Variables** bölümünde `TRACKING_ENABLED=true` tanımlayın **yalnızca gerçek ürün/kupon kaynakları, Telegram sırları ve Actions bütçesi doğrulandıktan sonra**. Bu bayrak yokken 30 dakikalık workflow, runner ayırmadan atlanır (ücretli sürprizlerden kaçınmak için).
-5. **Actions → Watch prices and coupon feeds → Run workflow** ile manuel bir çalışma başlatın. `data/state.json` ve run loglarını kontrol edin.
+4. **Settings → Secrets and variables → Actions → Variables** bölümünde `TRACKING_ENABLED=true` tanımlayın **yalnızca gerçek ürün/kupon kaynakları, Telegram sırları ve Actions bütçesi doğrulandıktan sonra**. Bu bayrak yokken zamanlanmış iş atlanır ve runner ayırmaz; manuel çalıştırma ise eksik ön koşulları hata olarak raporlar.
+5. **Actions → Watch prices and coupon feeds → Run workflow** ile manuel bir çalışma başlatın. Neon veritabanındaki durumu ve run loglarını kontrol edin; üretimde yerel `data/state.json` kalıcı kaynak değildir.
 6. Telegram bağlantısını yerel bilgisayarda `TELEGRAM_BOT_TOKEN` ve `TELEGRAM_CHAT_ID` ortam değişkenleriyle `python -m tracker test-telegram` komutuyla doğrulayabilirsiniz.
 7. İlk fiyat ölçümü alarm üretmez; fiyat düştüğünde ikinci tarama ile test edin. Kupon akışı ilk okumada mevcut eski girdileri kaydeder, geçmiş girdileri topluca bildirmez.
 
