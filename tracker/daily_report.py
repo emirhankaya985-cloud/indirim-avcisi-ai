@@ -23,7 +23,10 @@ def render(state, config, enabled, now, storage_ok):
         except (KeyError, TypeError, ValueError):
             continue
     failures = sum(bool(r.get('errors')) for r in runs)
-    products = len(config.get('products', []))
+    active_sources = {s.get('url') for s in config.get('catalog_sources', []) if s.get('authorized') is True}
+    tracked_urls = {p.get('url') for p in config.get('products', [])}
+    tracked_urls.update(p.get('url') for p in state.get('catalog', {}).values() if p.get('source') in active_sources)
+    products = len(tracked_urls)
     feeds = len(config.get('coupon_feeds', []))
     scans = sum(r.get('products_ok', 0) for r in runs)
     feed_reads = sum(r.get('feeds_ok', 0) for r in runs)
@@ -31,6 +34,8 @@ def render(state, config, enabled, now, storage_ok):
     status = ('ENGELLİ' if blocked else 'VERİ YOK' if not runs
               else 'KONTROL GEREKLİ' if failures or not scans or len(runs) < 48
               else 'KAYITLI TARAMALAR VAR')
+    def total(key):
+        return str(sum(r[key] for r in runs)) if storage_ok and runs and all(key in r for r in runs) else 'bilinmiyor'
     return '\n'.join([
         'İndirim Avcısı AI — Günlük durum raporu',
         now.astimezone(ZoneInfo('Europe/Istanbul')).strftime('%d.%m.%Y %H:%M Türkiye'),
@@ -38,9 +43,12 @@ def render(state, config, enabled, now, storage_ok):
         f'Otomasyon: {"açık" if enabled else "kapalı"}',
         f'Neon: {"okuma başarılı" if storage_ok else "doğrulanamadı"}',
         f'Tanımlı ürün: {products} | Kupon akışı: {feeds}',
-        f'Son 24 saatte kayıtlı tarama: {len(runs)} (hedef 48, garanti değil)',
-        f'Başarılı ürün okumaları: {scans} | Akış okumaları: {feed_reads}',
-        f'Hatalı tarama: {failures} | API kabul edilen alarm: {sum(r.get("sent", 0) for r in runs)}',
+        f'Son 24 saatte kayıtlı tarama: {len(runs)} (hedef 48, garanti değil)' if storage_ok else 'Son 24 saatte tarama: bilinmiyor',
+        f'Başarılı ürün okumaları: {scans} | Akış okumaları: {feed_reads}' if storage_ok else 'Başarılı ürün/akış okumaları: bilinmiyor',
+        f'Yeni keşif: {total("discovered")} | İndirim: {total("price_alerts")} | Kupon adayı: {total("coupon_candidates")}',
+        f'Başarısız bildirim: {total("notification_failed")}',
+        'GitHub zamanlayıcı ve güncel faturalama/kota: bağımsız doğrulama gerekli',
+        f'Hatalı tarama: {failures} | API kabul edilen alarm: {sum(r.get("sent", 0) for r in runs)}' if storage_ok else 'Hatalı tarama / API kabulü: bilinmiyor',
         f'Bekleyen alarm: {len(state.get("pending", []))}' if storage_ok else 'Bekleyen alarm: bilinmiyor',
         'Kupon adayları ödeme ekranında doğrulanmış değildir.',
         'Neon okunamadığında sayımlar mevcut kayıtları temsil etmez.' if not storage_ok
@@ -64,7 +72,7 @@ def send_ntfy(body, env=None):
         with build_opener(_NoRedirect()).open(req, timeout=20) as response:
             result = json.loads(response.read(65536))
             if response.status == 200 and result.get('event') == 'message' and result.get('id'):
-                return True, 'ntfy API kabul etti'
+                return True, 'ntfy:' + str(result['id'])
     except Exception:
         pass
     return False, 'ntfy gönderimi doğrulanamadı'
@@ -86,13 +94,13 @@ def main():
             pass
     enabled = os.getenv('TRACKING_ENABLED') == 'true'
     body = render(state, config, enabled, datetime.now(timezone.utc), storage_ok)
-    telegram_ok, _ = send_message(body)
     ntfy_configured = bool(os.getenv('NTFY_TOPIC', '').strip())
     ntfy_ok = send_ntfy(body)[0] if ntfy_configured else None
+    telegram_ok = send_message(body)[0] if not ntfy_configured else None
     print('Telegram API kabulü: ' + ('evet' if telegram_ok else 'hayır'))
     print('ntfy API kabulü: ' + ('evet' if ntfy_ok else 'hayır' if ntfy_configured else 'yapılandırılmamış'))
     print('Neon okuma: ' + ('başarılı' if storage_ok else 'doğrulanamadı'))
-    return 0 if telegram_ok and storage_ok and (not ntfy_configured or ntfy_ok) else 1
+    return 0 if storage_ok and (ntfy_ok if ntfy_configured else telegram_ok) else 1
 
 
 if __name__ == '__main__':

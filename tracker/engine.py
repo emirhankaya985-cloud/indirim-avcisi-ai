@@ -107,6 +107,8 @@ def update_price(state: dict, product: dict, price: Decimal, now: datetime, evid
         body = (f'📉 FİYAT DÜŞTÜ | {product["name"][:100]}\n'
                 f'Önceki: {prev:.2f} {product.get("currency", "TRY")}\n'
                 f'Yeni: {price:.2f} {product.get("currency", "TRY")} | -%{change:.1f}\n'
+                f'Tasarruf: {prev-price:.2f} {product.get("currency", "TRY")}\n'
+                f'Son 30 günün kayıtlı en düşük önceki fiyatı: {past_low if past_low is not None else "bilinmiyor"}\n'
                 f'Kaynak: {evidence}; ürün sayfası\n{product["url"]}\n'
                 f'Not: Fiyat sepette değişebilir; otomatik satın alma yok.')
         key = sha256(f'price:{pid}:{price}:{timestamp(now)}'.encode()).hexdigest()[:20]
@@ -114,7 +116,10 @@ def update_price(state: dict, product: dict, price: Decimal, now: datetime, evid
                                                  'created_at': timestamp(now), 'attempts': 0})
         existing['last_alert_at'] = timestamp(now)
     if not samples or Decimal(samples[-1]['price']) != price or samples[-1]['time'][:10] != now.date().isoformat():
-        samples.append({'time': timestamp(now), 'price': str(price)})
+        samples.append({'time': timestamp(now), 'price': str(price),
+                        'currency': product.get('currency', 'TRY'), 'evidence': evidence})
+    existing['all_time_low'] = str(min([price] + [Decimal(s['price']) for s in samples] +
+                                       ([Decimal(existing['all_time_low'])] if existing.get('all_time_low') else [])))
     existing.update({'samples': samples, 'last_price': str(price),
                      'last_checked': timestamp(now), 'currency': product.get('currency', 'TRY'),
                      'evidence': evidence, 'last_error': None})
@@ -168,7 +173,8 @@ def dispatch_pending(state: dict, sender=send_message, current_time: datetime | 
         if ok:
             sent += 1
             state.setdefault('delivery_log', []).append({
-                'id': item['id'], 'telegram_message_id': info, 'sent_at': timestamp(now)})
+                'id': item['id'], **({'channel': 'ntfy', 'message_id': info[5:]} if info.startswith('ntfy:') else
+                                    {'channel': 'telegram', 'telegram_message_id': info}), 'sent_at': timestamp(now)})
         else:
             failed += 1
             item['attempts'] = item.get('attempts', 0) + 1
